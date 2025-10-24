@@ -1,0 +1,56 @@
+Этапы запуска проекта:
+1) Запуск сервера Nats:
+	cd "C:\nats-streaming-server-v0.25.6-windows-amd64"
+	nats-streaming-server.exe -p 4222 -m 8222 -cid orders-cluster --store file --dir .\data --max_msgs 0 --max_bytes 0
+2) Перейти в корень проекта orders-demo и запустить с нужными переменными окружения:
+	set PG_URL=postgres://demo:demo@localhost:5432/ordersdb
+	set STAN_CLUSTER=orders-cluster
+	set STAN_CLIENT=orders-service
+	set STAN_URL=nats://localhost:4222
+	set STAN_SUBJECT=orders
+	set HTTP_ADDR=:8080
+З) Запуск сервиса:
+	go run .\service
+2) Публикация:
+	go run .\publisher .\model.json
+3) Открыть браузер, перейти по адресу:
+	http://localhost:8080
+
+
+Что было реализовано:
+
+1. PostgreSQL
+- Локально развернута PostgreSQL
+- Создана БД "ordersdb"
+- Настроен пользователь "demo" c паролем demo, владелец БД
+- Реализованы таблицы orders, delivery, payment, items + индекс idx_items_order_uid — созданы SQL-скриптом
+
+2. Сервис
+- Подключение и подписка на канал в nats-streaming
+	Запущен nats-streaming-server (лог “Streaming Server is ready”); 
+	сервис подключается через stan.Connect(...) и подписывается на subject orders с DurableName, ManualAckMode, DeliverAllAvailable
+- Запись полученных данных в БД
+	В handleMessage — парсинг JSON → транзакция → UPSERT в orders/delivery/payment, 
+	полное перевставление items → Commit. Ошибки = нет Ack(), сообщение переиздастся
+- Кеширование in-memory
+	sync.Map (a.cache.Store(ord.OrderUID, ord)), HTTP читает именно из кэша
+- Восстановление кэша из БД при старте
+	restoreCache() читает orders.raw и кладёт в sync.Map
+- HTTP-сервер, отдача по id из кэша
+	GET /orders/{id} → из sync.Map. В логах: http listen :8080
+- Простейший интерфейс
+	static/index.html, форма ввода order_uid, показ JSON. 
+	работает локально на http://localhost:8080
+
+3. Надежность
+- Статичность данных → модель хранения
+	В БД нормализация + orders.raw (JSONB) на будущее; 
+	в кэше целиком объект Order по ключу order_uid
+- Защита от мусора в канале
+	Нераспарсенный JSON/пустой order_uid → возвращается ошибка → Ack() не отправляется →
+	сообщение будет переиздано/можно настроить DLQ
+- Отдельный скрипт-публикатор
+	publisher (отдельная main)
+- Не терять данные при ошибках
+	транзакции в БД, ON CONFLICT DO UPDATE (идемпотентность), ManualAck (нет ack при ошибке),
+	durable-подписка (догонит после рестарта), кэш восстанавливается из БД

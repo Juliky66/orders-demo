@@ -1,0 +1,23 @@
+# executables and binaries
+*.exe
+*.out
+*.dll
+
+# Go build
+/bin/
+/obj/
+*.test
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Postgres data
+pgdata/
+
+# Temporary
+*.log

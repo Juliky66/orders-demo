@@ -1,0 +1,62 @@
+{
+  "order_uid": "a987xyzt4321example",
+  "track_number": "WBSAMPLETRACK02",
+  "entry": "WBIL",
+  "delivery": {
+    "name": "Иван Иванов",
+    "phone": "+79991234567",
+    "zip": "101000",
+    "city": "Москва",
+    "address": "ул. Тверская, д. 10, кв. 5",
+    "region": "Московская область",
+    "email": "ivan@example.com"
+  },
+  "payment": {
+    "transaction": "a987xyzt4321example",
+    "request_id": "",
+    "currency": "RUB",
+    "provider": "sberpay",
+    "amount": 2499,
+    "payment_dt": 1637910000,
+    "bank": "Сбербанк",
+    "delivery_cost": 299,
+    "goods_total": 2200,
+    "custom_fee": 0
+  },
+  "items": [
+    {
+      "chrt_id": 5555555,
+      "track_number": "WBSAMPLETRACK02",
+      "price": 1200,
+      "rid": "rid-example-01",
+      "name": "Футболка мужская",
+      "sale": 10,
+      "size": "M",
+      "total_price": 1080,
+      "nm_id": 987654,
+      "brand": "Zara",
+      "status": 202
+    },
+    {
+      "chrt_id": 5555556,
+      "track_number": "WBSAMPLETRACK02",
+      "price": 1000,
+      "rid": "rid-example-02",
+      "name": "Джинсы синие",
+      "sale": 5,
+      "size": "32",
+      "total_price": 950,
+      "nm_id": 987655,
+      "brand": "Levi’s",
+      "status": 202
+    }
+  ],
+  "locale": "ru",
+  "internal_signature": "",
+  "customer_id": "ivan123",
+  "delivery_service": "boxberry",
+  "shardkey": "3",
+  "sm_id": 55,
+  "date_created": "2021-12-01T09:15:00Z",
+  "oof_shard": "2"
+}
