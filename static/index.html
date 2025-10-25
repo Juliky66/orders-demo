@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Просмотр заказа — Orders Demo</title>
+  <style>
+    :root{
+      --bg: #faf7ff;           /* пастельный фон */
+      --bg-grad: linear-gradient(180deg,#fbf9ff 0%, #f5fbff 100%);
+      --card: #ffffff;
+      --text: #2b2d42;
+      --muted: #6b7280;
+      --accent: #a5b4fc;       /* сиренево-лаванда */
+      --accent-2: #c7f0db;     /* мятная пастель */
+      --danger: #fca5a5;       /* мягкий красный */
+      --shadow: 0 8px 24px rgba(19, 25, 39, .06);
+      --radius: 16px;
+    }
+    * { box-sizing: border-box }
+    html, body { height: 100% }
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+      color: var(--text);
+      background: var(--bg-grad);
+    }
+    .container{ max-width: 1100px; margin: 0 auto; padding: 24px; }
+    header{ display:flex; align-items:center; gap:16px; margin-bottom: 20px; }
+    .logo{ width:40px; height:40px; border-radius:12px; background: conic-gradient(from 180deg, var(--accent), var(--accent-2)); box-shadow: var(--shadow); }
+    h1{ font-size: clamp(20px, 3vw, 28px); margin:0; letter-spacing: .3px }
+    .muted{ color: var(--muted) }
+
+    /* search bar */
+    .search{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin: 12px 0 24px 0; background: rgba(255,255,255,.7); padding: 14px; border-radius: var(--radius); box-shadow: var(--shadow); backdrop-filter: blur(4px); }
+    .search input{ flex:1; min-width: 260px; padding: 12px 14px; font-size: 15px; border: 1px solid #e6e6ef; border-radius: 12px; outline: none; transition: border-color .2s, box-shadow .2s; background: #fff; }
+    .search input:focus{ border-color: #c7cffc; box-shadow: 0 0 0 4px rgba(165,180,252,.22) }
+    .btn{ padding: 12px 16px; border:0; border-radius: 12px; background: var(--accent); color:#1f2937; font-weight:600; cursor:pointer; box-shadow: var(--shadow); transition: transform .06s ease-in; }
+    .btn:hover{ transform: translateY(-1px) }
+    .btn.secondary{ background: #e9ecff }
+
+    .grid{ display:grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+    .card{ grid-column: span 12; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 18px; overflow: hidden; }
+    @media (min-width: 900px){ .card.span-6{ grid-column: span 6 } }
+
+    .card h2{ font-size: 18px; margin: 0 0 10px 0 }
+    .kv{ display:grid; grid-template-columns: 1fr 2fr; gap: 8px 12px; }
+    .kv div{ padding: 6px 0; border-bottom: 1px dashed #eef0f6 }
+    .kv div.key{ color: var(--muted) }
+    .tag{ display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius: 999px; background: #f3f4ff; border:1px solid #e6e9ff; font-size: 12px }
+
+    /* items table */
+    .table-wrap{ overflow:auto; border-radius: 12px; border:1px solid #eef0f6 }
+    table{ width:100%; border-collapse: collapse; font-size: 14px; background:#fff }
+    th, td{ padding: 10px 12px; text-align: left; border-bottom: 1px solid #f1f3f9 }
+    th{ position: sticky; top:0; background: #f8f9ff; z-index:1 }
+
+    /* states */
+    .empty, .error { padding: 16px; border-radius: 12px; background: #fff; box-shadow: var(--shadow); }
+    .error{ border-left: 4px solid var(--danger);} .empty{ border-left: 4px solid var(--accent-2); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo" aria-hidden="true"></div>
+      <div>
+        <h1>Просмотр заказа</h1>
+        <div class="muted">Введите <strong>order_uid</strong>, чтобы получить детали</div>
+      </div>
+    </header>
+
+    <section class="search" role="search">
+      <input id="oid" placeholder="Например: b563feb7b2b84b6test" aria-label="Order UID" />
+      <button class="btn" id="btnLoad">Загрузить</button>
+      <button class="btn secondary" id="btnDemo">Демо UID</button>
+    </section>
+
+    <section id="state" style="margin-bottom:16px"></section>
+
+    <section class="grid" id="content" hidden>
+      <article class="card span-6" id="summaryCard">
+        <h2>Сводка заказа</h2>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px">
+          <span class="tag" id="uidTag">order_uid</span>
+          <button class="btn secondary" id="copyUid" title="Скопировать UID">Копировать</button>
+        </div>
+        <div class="kv">
+          <div class="key">Трек-номер</div><div id="track"></div>
+          <div class="key">Служба доставки</div><div id="dsvc"></div>
+          <div class="key">Клиент</div><div id="cust"></div>
+          <div class="key">Язык</div><div id="locale"></div>
+          <div class="key">Создано</div><div id="created"></div>
+        </div>
+      </article>
+
+      <article class="card span-6">
+        <h2>Доставка</h2>
+        <div class="kv">
+          <div class="key">Имя</div><div id="d_name"></div>
+          <div class="key">Телефон</div><div id="d_phone"></div>
+          <div class="key">Email</div><div id="d_email"></div>
+          <div class="key">Адрес</div><div id="d_addr"></div>
+          <div class="key">Город / Регион</div><div id="d_city"></div>
+          <div class="key">Индекс</div><div id="d_zip"></div>
+        </div>
+      </article>
+
+      <article class="card span-6">
+        <h2>Оплата</h2>
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px">
+          <span class="tag" id="currency"></span>
+          <span class="tag" id="provider"></span>
+        </div>
+        <div class="kv">
+          <div class="key">Транзакция</div><div id="p_tx"></div>
+          <div class="key">Сумма</div><div id="p_amount"></div>
+          <div class="key">Доставка</div><div id="p_delivery"></div>
+          <div class="key">Товары</div><div id="p_goods"></div>
+          <div class="key">Банк</div><div id="p_bank"></div>
+          <div class="key">Дата оплаты</div><div id="p_dt"></div>
+        </div>
+      </article>
+
+      <article class="card span-12">
+        <h2>Товары</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Название</th>
+                <th>Brand</th>
+                <th>Цена</th>
+                <th>Скидка</th>
+                <th>Итого</th>
+                <th>Track</th>
+                <th>RID</th>
+                <th>NM ID</th>
+                <th>CHRT ID</th>
+                <th>Статус</th>
+              </tr>
+            </thead>
+            <tbody id="itemsBody"></tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="card span-12">
+        <h2>Исходный JSON</h2>
+        <pre id="raw" style="margin:0; white-space:pre-wrap"></pre>
+      </article>
+    </section>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const state = $("state");
+    const content = $("content");
+
+    // Сначала ничего не показываем
+    hideContent();
+
+    function hideContent(){
+      content.hidden = true;
+      // очищаем прошлые данные
+      const clearIds = ["uidTag","track","dsvc","cust","locale","created","d_name","d_phone","d_email","d_addr","d_city","d_zip","currency","provider","p_tx","p_amount","p_delivery","p_goods","p_bank","p_dt"];
+      clearIds.forEach(id=>{ const el=$(id); if(el) el.textContent=''; });
+      const tbody = $('itemsBody'); if(tbody) tbody.innerHTML = '';
+      const raw = $('raw'); if(raw) raw.textContent = '';
+    }
+
+    function setState(type, message){
+      state.innerHTML = "";
+      if(!message){ state.hidden = true; return; }
+      state.hidden = false;
+      const el = document.createElement('div');
+      el.className = type === 'error' ? 'error' : 'empty';
+      el.textContent = message;
+      state.replaceChildren(el);
+    }
+
+    function fmtMoney(v, curr){
+      try { return new Intl.NumberFormat('ru-RU', { style:'currency', currency: curr || 'USD' }).format(v); }
+      catch { return v + ' ' + (curr||''); }
+    }
+
+    function fmtDate(iso){
+      if(!iso) return '';
+      try{ return new Intl.DateTimeFormat('ru-RU', { dateStyle:'medium', timeStyle:'short' }).format(new Date(iso)); }catch{ return iso; }
+    }
+
+    async function fetchOrder(id){
+      // перед загрузкой прячем контент и очищаем прошлые данные
+      hideContent();
+      if(!id) { setState('empty', 'Введите order_uid и нажмите «Загрузить».'); return; }
+      setState('empty', 'Загружаем данные заказа…');
+      try{
+        const res = await fetch('/orders/' + encodeURIComponent(id));
+        if(res.status === 404){ setState('error', 'Заказ не найден в кэше. Проверьте order_uid или опубликуйте JSON.'); return; }
+        if(!res.ok){ setState('error', 'Ошибка загрузки: ' + res.status + ' ' + res.statusText); return; }
+        const data = await res.json();
+        renderOrder(data);
+        setState(); // очистить сообщение
+      }catch(err){
+        setState('error', 'Сеть недоступна или сервис не запущен. Детали: ' + err.message);
+      }
+    }
+
+    function renderOrder(o){
+      content.hidden = false;
+      $('uidTag').textContent = o.order_uid || '—';
+      $('track').textContent = o.track_number || '—';
+      $('dsvc').textContent = o.delivery_service || '—';
+      $('cust').textContent = o.customer_id || '—';
+      $('locale').textContent = o.locale || '—';
+      $('created').textContent = fmtDate(o.date_created);
+
+      const d = o.delivery || {};
+      $('d_name').textContent = d.name || '—';
+      $('d_phone').textContent = d.phone || '—';
+      $('d_email').textContent = d.email || '—';
+      $('d_addr').textContent = (d.address || '—');
+      $('d_city').textContent = [d.city, d.region].filter(Boolean).join(' / ') || '—';
+      $('d_zip').textContent = d.zip || '—';
+
+      const p = o.payment || {};
+      $('currency').textContent = p.currency ? ('Валюта: ' + p.currency) : 'Валюта: —';
+      $('provider').textContent = p.provider ? ('Провайдер: ' + p.provider) : 'Провайдер: —';
+      $('p_tx').textContent = p.transaction || '—';
+      $('p_amount').textContent = (p.amount != null) ? fmtMoney(p.amount, p.currency) : '—';
+      $('p_delivery').textContent = (p.delivery_cost != null) ? fmtMoney(p.delivery_cost, p.currency) : '—';
+      $('p_goods').textContent = (p.goods_total != null) ? fmtMoney(p.goods_total, p.currency) : '—';
+      $('p_bank').textContent = p.bank || '—';
+      $('p_dt').textContent = p.payment_dt ? new Date(p.payment_dt*1000).toLocaleString('ru-RU') : '—';
+
+      const tbody = $('itemsBody');
+      if(tbody){
+        tbody.innerHTML = '';
+        (o.items||[]).forEach(it =>{
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${escapeHtml(it.name||'—')}</td>
+            <td>${escapeHtml(it.brand||'—')}</td>
+            <td>${it.price!=null? fmtMoney(it.price, p.currency):'—'}</td>
+            <td>${it.sale!=null? (it.sale + '%'):'—'}</td>
+            <td>${it.total_price!=null? fmtMoney(it.total_price, p.currency):'—'}</td>
+            <td>${escapeHtml(it.track_number||'—')}</td>
+            <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis">${escapeHtml(it.rid||'—')}</td>
+            <td>${it.nm_id ?? '—'}</td>
+            <td>${it.chrt_id ?? '—'}</td>
+            <td>${it.status ?? '—'}</td>`;
+          tbody.appendChild(tr);
+        });
+      }
+
+      const raw = $('raw');
+      if(raw) raw.textContent = JSON.stringify(o, null, 2);
+    }
+
+    function escapeHtml(str){
+      return String(str).replace(/[&<>"']/g, s=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s]));
+    }
+
+    // UI events
+    $('btnLoad').addEventListener('click', ()=> fetchOrder($('oid').value.trim()));
+    $('btnDemo').addEventListener('click', ()=>{ const id='b563feb7b2b84b6test'; $('oid').value=id; fetchOrder(id); });
+    $('oid').addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ fetchOrder($('oid').value.trim()); } });
+    $('copyUid').addEventListener('click', async ()=>{
+      const uid = $('uidTag').textContent || '';
+      if(!uid || uid==='order_uid') return;
+      try{ await navigator.clipboard.writeText(uid); const b=$('copyUid'); b.textContent='Скопировано'; setTimeout(()=> b.textContent='Копировать', 1200);}catch{}
+    });
+
+    // На старте ничего не показываем; автозагрузка не выполняется,
+    // чтобы не было случайного отображения старых данных.
+  </script>
+</body>
+</html>
