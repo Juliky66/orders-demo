@@ -34,11 +34,11 @@ CREATE DATABASE ordersdb OWNER demo;
 
 #### Применение схемы
 
-В корне проекта (`orders-demo`) находится файл **`schema.sql`**, который создаёт все таблицы и связи.
+В корне проекта (`order`) находится файл **`schema.sql`**, который создаёт все таблицы и связи.
 Чтобы применить его, выполнить:
 
 ```bash
-psql -U postgres -h localhost -f "C:\Users\1645305\Desktop\orders-demo\schema.sql"
+psql -U postgres -h localhost -f "C:\Users\1645305\Desktop\order\schema.sql"
 ```
 
 *Замечание*: Если путь отличается - подставить свой. Можно все выполнить в среде PgAdmin.
@@ -71,7 +71,7 @@ set STAN_URL=nats://localhost:4222
 set STAN_SUBJECT=orders
 set HTTP_ADDR=:8080
 
-go run .\service
+go run ./go/service
 ```
 
 ### 4. Отправка тестовых заказов
@@ -79,8 +79,8 @@ go run .\service
 Открыть второе окно CMD или терминал в VS Code:
 
 ```bash
-go run .\publisher .\model.json
-go run .\publisher .\model2.json
+go run .\go\publisher .\model.json 
+go run .\go\publisher .\model2.json 
 ```
 
 После публикации сервис получит заказы:
